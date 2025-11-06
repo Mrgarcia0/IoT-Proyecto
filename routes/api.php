@@ -8,5 +8,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::apiResource('devices', DeviceController::class);
+// Prefijar los nombres para evitar colisión con rutas web (devices.show)
+Route::apiResource('devices', DeviceController::class)->names('api.devices');
 Route::get('devices/{device}/sensor-readings', [DeviceController::class, 'sensorReadings']);
