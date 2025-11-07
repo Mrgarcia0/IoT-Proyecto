@@ -37,57 +37,58 @@ class DeviceSeeder extends Seeder
         ]);
 
         $device2 = Device::create([
-            'name' => 'Sensor Humedad Invernadero',
+            'name' => 'Sensor de consumo eléctrico',
             'type' => 'Digital Twin',
-            'location' => 'Invernadero #1',
+            'location' => 'wattorímetro',
         ]);
 
         $device3 = Device::create([
-            'name' => 'API Clima Externo',
+            'name' => 'Sensor de calidad del aire',
             'type' => 'API',
-            'location' => 'Ciudad',
+            'location' => 'Entrada de la casa',
         ]);
 
         $device4 = Device::create([
-            'name' => 'DataSet Histórico Presión',
+            'name' => 'Sensor de humo y gas',
             'type' => 'DataSet',
-            'location' => 'Laboratorio',
+            'location' => 'Cocina',
         ]);
 
         $device5 = Device::create([
-            'name' => 'Monitor de Energía Oficina',
+            'name' => 'Sensor de polvo',
             'type' => 'Real',
-            'location' => 'Oficina Principal',
+            'location' => 'Casa',
             'is_active' => false, // Ejemplo de sensor inactivo
         ]);
 
-        $devices = [$device1, $device2, $device3, $device4, $device5];
-
-        // 2. Generar Lecturas de Sensores para los últimos 7 días
+        // 2. Generar lecturas históricas extensas SOLO para el Termostato (población inicial)
         $now = Carbon::now();
-        foreach ($devices as $device) {
-            if (!$device->is_active) continue; // No generar datos para sensores inactivos
+        $device = $device1; // Termostato Sala Principal
+        // Últimos 30 días, cada 15 minutos
+        for ($d = 30; $d >= 0; $d--) {
+            for ($hh = 0; $hh < 24; $hh++) {
+                for ($m = 0; $m < 60; $m += 15) {
+                    $recordDate = $now->copy()->subDays($d)->setHour($hh)->setMinute($m)->setSecond(0);
+                    $hour = (int) $recordDate->format('G');
+                    $pi = pi();
+                    $temp = 24 + 4 * sin(($hour - 14) / 24 * 2 * $pi) + (mt_rand(-20, 20) / 100);
+                    $temp = max(18, min(30, $temp));
+                    $hum = 70 - 12 * sin(($hour - 14) / 24 * 2 * $pi) + (mt_rand(-150, 150) / 100);
+                    $hum = max(45, min(90, $hum));
 
-            for ($d = 7; $d >= 0; $d--) {
-                for ($h = 0; $h < 24; $h++) {
-                    $recordDate = $now->copy()->subDays($d)->setHour($h)->setMinute(0)->setSecond(0);
-
-                    // Simular Temperatura
                     SensorReading::create([
                         'device_id' => $device->id,
                         'variable_name' => 'temperature',
-                        'value' => rand(1800, 2500) / 100, // Valor entre 18.00 y 25.00
+                        'value' => round($temp, 2),
                         'unit' => '°C',
-                        'recorded_at' => $recordDate
+                        'recorded_at' => $recordDate,
                     ]);
-
-                    // Simular Humedad
                     SensorReading::create([
                         'device_id' => $device->id,
                         'variable_name' => 'humidity',
-                        'value' => rand(4000, 6500) / 100, // Valor entre 40.00 y 65.00
+                        'value' => round($hum, 2),
                         'unit' => '%',
-                        'recorded_at' => $recordDate
+                        'recorded_at' => $recordDate,
                     ]);
                 }
             }
