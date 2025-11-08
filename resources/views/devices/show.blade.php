@@ -63,13 +63,10 @@
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         const deviceId = {{ $device->id }};
         const ctx = document.getElementById('chart').getContext('2d');
-        const chart = new Chart(ctx, {
+        let chart = new Chart(ctx, {
             type: 'line',
             data: {
-                datasets: [
-                    { label: 'Temperatura (°C)', data: [], borderColor: '#34d399', tension: 0.2 },
-                    { label: 'Humedad (%)', data: [], borderColor: '#60a5fa', tension: 0.2 }
-                ]
+                datasets: []
             },
             options: {
                 responsive: true,
@@ -85,11 +82,17 @@
             const res = await fetch(`/devices/${deviceId}/readings?range=${range}&_=${Date.now()}`, { cache: 'no-store' });
             if (!res.ok) throw new Error('No se pudo cargar lecturas');
             const data = await res.json();
-            // Convertir timestamps explícitamente a Date para evitar problemas de escala tiempo
-            const tempPoints = (data.temperature || []).map(p => ({ x: new Date(p.t), y: p.v }));
-            const humPoints  = (data.humidity || []).map(p => ({ x: new Date(p.t), y: p.v }));
-            chart.data.datasets[0].data = tempPoints;
-            chart.data.datasets[1].data = humPoints;
+            // Soporte genérico: construir datasets a partir de series por variable
+            const palette = ['#34d399','#60a5fa','#f59e0b','#ef4444','#a78bfa','#10b981','#f472b6','#22d3ee'];
+            const series = data.series || {};
+            const units = data.units || {};
+            const datasets = Object.entries(series).map(([name, points], idx) => ({
+                label: `${name}${units[name] ? ' ('+units[name]+')' : ''}`,
+                data: (points || []).map(p => ({ x: new Date(p.t), y: p.v })),
+                borderColor: palette[idx % palette.length],
+                tension: 0.2
+            }));
+            chart.data.datasets = datasets;
             // Ajustar unidad del eje X según rango seleccionado
             chart.options.scales.x.time.unit = (range === 'week' || range === 'month' || range === 'historico') ? 'day' : 'minute';
             chart.update();

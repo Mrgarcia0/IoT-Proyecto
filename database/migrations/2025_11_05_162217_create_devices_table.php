@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->enum('type', ['Real', 'Digital Twin', 'API', 'DataSet']);
             $table->string('location')->nullable();
-            $table->boolean('is_active')->default(true);
+            $table->boolean('is_active')->default(false);
             $table->json('settings')->nullable(); // Para ajustes, calibración, etc.
             $table->timestamps();
         });

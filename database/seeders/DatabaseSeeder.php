@@ -15,11 +15,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
+        // Usuarios de prueba
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        // Dispositivos y lecturas (30 días de datos para 5 sensores)
+        $this->call(DeviceSeeder::class);
     }
 }

@@ -91,10 +91,8 @@
                     onClasses.forEach(c => btn.classList.toggle(c, isActive));
                     offClasses.forEach(c => btn.classList.toggle(c, !isActive));
 
-                    // Iniciar/parar simulación sólo para el Termostato (id=1)
-                    if (id === '1') {
-                        if (isActive) startSim(id); else stopSim(id);
-                    }
+                    // Iniciar/parar simulación para cualquier sensor
+                    if (isActive) startSim(id); else stopSim(id);
                 } catch (err) {
                     console.error('Toggle error', err);
                 } finally {
@@ -104,11 +102,12 @@
             });
         });
 
-        // Iniciar simulación al cargar si el Termostato está ON
-        const thermostatBtn = document.querySelector('.toggle-btn[data-device-id="1"]');
-        if (thermostatBtn && thermostatBtn.textContent.trim() === 'ON') {
-            startSim('1');
-        }
+        // Iniciar simulación al cargar para todos los sensores que estén ON
+        document.querySelectorAll('.toggle-btn').forEach(btn => {
+            const id = btn.dataset.deviceId;
+            const isOn = btn.classList.contains('bg-green-600') || btn.textContent.trim() === 'ON';
+            if (isOn) startSim(id);
+        });
     </script>
 </body>
 </html>
