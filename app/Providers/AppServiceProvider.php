@@ -20,16 +20,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Al iniciar la aplicación, si la variable de entorno indica reset,
-        // pon todos los dispositivos en OFF una sola vez por proceso.
-        static $didReset = false;
-        if (!$didReset) {
-            try {
-                Device::query()->update(['is_active' => false]);
-            } catch (\Throwable $e) {
-                // Evitar que falle el arranque si aún no hay migraciones
-            }
-            $didReset = true;
-        }
+        // No forzar el estado de los dispositivos en cada arranque de request.
+        // El estado debe persistir según lo que el usuario elija (ON/OFF) y
+        // sólo inicializarse mediante seeders/migraciones.
     }
 }

@@ -46,6 +46,7 @@
                     <option value="day" selected>Hoy</option>
                     <option value="week">Última semana</option>
                     <option value="month">Último mes</option>
+                    <option value="historico">Histórico</option>
                 </select>
                 <button id="refreshBtn" class="w-10 h-10 rounded bg-gray-700 hover:bg-gray-600 flex items-center justify-center" title="Recargar">
                     <svg id="refreshIcon" class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -90,7 +91,7 @@
             chart.data.datasets[0].data = tempPoints;
             chart.data.datasets[1].data = humPoints;
             // Ajustar unidad del eje X según rango seleccionado
-            chart.options.scales.x.time.unit = (range === 'week' || range === 'month') ? 'day' : 'minute';
+            chart.options.scales.x.time.unit = (range === 'week' || range === 'month' || range === 'historico') ? 'day' : 'minute';
             chart.update();
         }
 

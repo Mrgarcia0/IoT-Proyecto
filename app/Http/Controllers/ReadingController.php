@@ -16,28 +16,41 @@ class ReadingController extends Controller
     public function readings(Request $request, Device $device)
     {
         $range = $request->string('range')->toString();
-        $now = Carbon::now();
+        $tz = config('app.timezone', 'UTC');
+        $now = Carbon::now($tz);
+
+        $query = SensorReading::where('device_id', $device->id);
 
         switch ($range) {
             case 'hour':
                 $from = $now->copy()->subHour();
+                $query->where('recorded_at', '>=', $from);
                 break;
             case 'day':
-                $from = $now->copy()->subDay();
+                // Sólo el día calendario actual en zona horaria de la app
+                $from = $now->copy()->startOfDay();
+                $to = $now->copy()->endOfDay();
+                $query->whereBetween('recorded_at', [$from, $to]);
                 break;
             case 'week':
                 $from = $now->copy()->subWeek();
+                $query->where('recorded_at', '>=', $from);
                 break;
             case 'month':
                 $from = $now->copy()->subMonth();
+                $query->where('recorded_at', '>=', $from);
+                break;
+            case 'historico':
+                // Sin filtro: regresar todo el histórico
                 break;
             default:
-                $from = $now->copy()->subDay();
+                // Por defecto: hoy
+                $from = $now->copy()->startOfDay();
+                $to = $now->copy()->endOfDay();
+                $query->whereBetween('recorded_at', [$from, $to]);
         }
 
-        $readings = SensorReading::where('device_id', $device->id)
-            ->where('recorded_at', '>=', $from)
-            ->orderBy('recorded_at', 'asc')
+        $readings = $query->orderBy('recorded_at', 'asc')
             ->get(['variable_name','value','unit','recorded_at']);
 
         $temperature = [];
