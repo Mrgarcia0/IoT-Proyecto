@@ -20,6 +20,36 @@ class DeviceController extends Controller
     }
 
     /**
+     * Explorador de datos (gráfica) con barra lateral.
+     */
+    public function explorer(Device $device): View
+    {
+        return view('devices.explorer', [
+            'device' => $device,
+        ]);
+    }
+
+    /**
+     * Paneles (placeholder) con barra lateral.
+     */
+    public function panels(Device $device): View
+    {
+        return view('devices.panels', [
+            'device' => $device,
+        ]);
+    }
+
+    /**
+     * Casa (placeholder) con barra lateral.
+     */
+    public function home(Device $device): View
+    {
+        return view('devices.home', [
+            'device' => $device,
+        ]);
+    }
+
+    /**
      * Alternar el estado is_active y redirigir a detalles.
      */
     public function toggle(Request $request, Device $device)
