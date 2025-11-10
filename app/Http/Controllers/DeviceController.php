@@ -44,8 +44,15 @@ class DeviceController extends Controller
      */
     public function home(Device $device): View
     {
+        // Listado rápido de variables para el "lobby"
+        $variables = \App\Models\SensorReading::where('device_id', $device->id)
+            ->select('variable_name')
+            ->distinct()
+            ->pluck('variable_name');
+
         return view('devices.home', [
             'device' => $device,
+            'variables' => $variables,
         ]);
     }
 
@@ -64,5 +71,29 @@ class DeviceController extends Controller
         }
 
         return redirect()->route('devices.show', $device);
+    }
+
+    /**
+     * Actualiza ajustes del dispositivo (Casa): setpoints, brillo, gas, etc.
+     */
+    public function updateSettings(Request $request, Device $device)
+    {
+        $payload = $request->validate([
+            'temperature_target' => 'nullable|numeric',
+            'light_level' => 'nullable|integer|min:0|max:100',
+            'gas_valve_open' => 'nullable|boolean',
+            'power_profile' => 'nullable|string|in:eco,normal,high',
+        ]);
+
+        $settings = $device->settings ? json_decode($device->settings, true) : [];
+        $settings = array_merge($settings, $payload);
+        $device->settings = json_encode($settings);
+        $device->save();
+
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'settings' => $settings]);
+        }
+
+        return redirect()->route('devices.home', $device)->with('status', 'Ajustes actualizados');
     }
 }

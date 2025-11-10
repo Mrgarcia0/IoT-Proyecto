@@ -12,4 +12,13 @@ class DashboardController extends Controller
         $devices = Device::all();
         return view('welcome', ['devices' => $devices]);
     }
+
+    /**
+     * Vista global de Casa con plano e iconos interactivos.
+     */
+    public function casa()
+    {
+        $devices = Device::all()->keyBy('id');
+        return view('home_global', ['devices' => $devices]);
+    }
 }

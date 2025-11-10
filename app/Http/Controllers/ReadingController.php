@@ -73,6 +73,29 @@ class ReadingController extends Controller
     }
 
     /**
+     * Devuelve las últimas lecturas por variable del dispositivo.
+     */
+    public function latest(Device $device)
+    {
+        $rows = SensorReading::where('device_id', $device->id)
+            ->orderByDesc('recorded_at')
+            ->get(['variable_name','value','unit','recorded_at']);
+
+        $latest = [];
+        foreach ($rows as $row) {
+            if (!isset($latest[$row->variable_name])) {
+                $latest[$row->variable_name] = [
+                    'value' => $row->value,
+                    'unit' => $row->unit,
+                    't' => $row->recorded_at->toIso8601String(),
+                ];
+            }
+        }
+
+        return response()->json(['series' => $latest]);
+    }
+
+    /**
      * Inserta una muestra simulada (temperatura + humedad) para el dispositivo.
      */
     public function simulateSample(Device $device)
@@ -85,10 +108,21 @@ class ReadingController extends Controller
         $hour = (int) $now->format('G');
         $pi = pi();
 
+        $settings = $device->settings ? json_decode($device->settings, true) : [];
+
         switch ($device->id) {
             case 1: // Termostato: temperatura y humedad
-                $temp = 24 + 4 * sin(($hour - 14) / 24 * 2 * $pi) + (mt_rand(-20, 20) / 100);
-                $temp = max(18, min(30, $temp));
+                // Ajuste por settings: temperature_target desplaza el centro y estrecha o amplia el rango
+                $target = isset($settings['temperature_target']) ? (float) $settings['temperature_target'] : 24.0;
+                $range = 4.0; // amplitud base
+                // Si la meta es baja (<20), estrechamos y desplazamos a valores más fríos
+                if ($target < 20) { $range = 3.0; }
+                if ($target < 18) { $range = 2.5; }
+                $temp = $target + $range * sin(($hour - 14) / 24 * 2 * $pi) + (mt_rand(-20, 20) / 100);
+                // límites dinámicos aproximados: alrededor de target ± (range+margin)
+                $min = max(12, $target - ($range + 2));
+                $max = min(32, $target + ($range + 2));
+                $temp = max($min, min($max, $temp));
                 $hum = 70 - 12 * sin(($hour - 14) / 24 * 2 * $pi) + (mt_rand(-150, 150) / 100);
                 $hum = max(45, min(90, $hum));
                 SensorReading::create([
@@ -107,7 +141,10 @@ class ReadingController extends Controller
                 ]);
                 break;
             case 2: // Consumo eléctrico: potencia (W)
-                $power = 150 + 200 * max(0, sin(($hour - 12) / 24 * 2 * $pi)) + (mt_rand(-50, 50) / 10);
+                $profile = $settings['power_profile'] ?? 'normal';
+                $base = $profile === 'eco' ? 120 : ($profile === 'high' ? 200 : 150);
+                $amp  = $profile === 'eco' ? 150 : ($profile === 'high' ? 280 : 200);
+                $power = $base + $amp * max(0, sin(($hour - 12) / 24 * 2 * $pi)) + (mt_rand(-50, 50) / 10);
                 $power = max(50, min(800, $power));
                 SensorReading::create([
                     'device_id' => $device->id,
@@ -138,8 +175,11 @@ class ReadingController extends Controller
                 ]);
                 break;
             case 4: // Humo y gas: índices
+                $valveOpen = (bool) ($settings['gas_valve_open'] ?? true);
                 $smoke = max(0, min(100, 5 + 10 * max(0, sin(($hour - 18)/24*2*$pi)) + (mt_rand(-100,100)/20)));
-                $gas   = max(0, min(100, 8 + 12 * max(0, sin(($hour - 18)/24*2*$pi)) + (mt_rand(-100,100)/20)));
+                $gasBase = $valveOpen ? 8 : 2;
+                $gasAmp  = $valveOpen ? 12 : 5;
+                $gas   = max(0, min(100, $gasBase + $gasAmp * max(0, sin(($hour - 18)/24*2*$pi)) + (mt_rand(-100,100)/20)));
                 SensorReading::create([
                     'device_id' => $device->id,
                     'variable_name' => 'smoke',
