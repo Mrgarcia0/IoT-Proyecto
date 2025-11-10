@@ -4,13 +4,18 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\ReadingController;
+use App\Http\Controllers\PanelController;
 
 Route::get('/', [DashboardController::class, 'index']);
 
 // Detalles de un dispositivo
 Route::get('/devices/{device}', [DeviceController::class, 'show'])->name('devices.show');
 Route::get('/devices/{device}/explorar', [DeviceController::class, 'explorer'])->name('devices.explorer');
-Route::get('/devices/{device}/paneles', [DeviceController::class, 'panels'])->name('devices.panels');
+Route::get('/devices/{device}/paneles', [PanelController::class, 'index'])->name('devices.panels');
+// CRUD de paneles por dispositivo
+Route::post('/devices/{device}/paneles', [PanelController::class, 'store'])->name('devices.panels.store');
+Route::put('/devices/{device}/paneles/{panelItem}', [PanelController::class, 'update'])->name('devices.panels.update');
+Route::delete('/devices/{device}/paneles/{panelItem}', [PanelController::class, 'destroy'])->name('devices.panels.destroy');
 Route::get('/devices/{device}/casa', [DeviceController::class, 'home'])->name('devices.home');
 
 // Toggle ON/OFF y redirección a detalles
