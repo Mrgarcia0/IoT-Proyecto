@@ -91,8 +91,12 @@ class ReadingController extends Controller
                 ];
             }
         }
-
-        return response()->json(['series' => $latest]);
+        $settings = $device->settings ? json_decode($device->settings, true) : [];
+        return response()->json([
+            'series' => $latest,
+            'settings' => $settings,
+            'is_active' => (bool) $device->is_active,
+        ]);
     }
 
     /**
@@ -100,10 +104,8 @@ class ReadingController extends Controller
      */
     public function simulateSample(Device $device)
     {
-        // No generar muestras si el dispositivo está apagado
-        if (!$device->is_active) {
-            return response()->json(['ok' => false, 'reason' => 'device_off'], 200);
-        }
+        // Generar muestras siempre para alimentar el tablero.
+        // Los actuadores controlan sus propias salidas (p.ej., TV/Nevera/Gas pueden valer 0 si están apagados).
         $now = Carbon::now();
         $hour = (int) $now->format('G');
         $pi = pi();
@@ -140,17 +142,80 @@ class ReadingController extends Controller
                     'recorded_at' => $now,
                 ]);
                 break;
-            case 2: // Consumo eléctrico: potencia (W)
+            case 2: // Consumo eléctrico y actuadores de sala/cocina
                 $profile = $settings['power_profile'] ?? 'normal';
-                $base = $profile === 'eco' ? 120 : ($profile === 'high' ? 200 : 150);
-                $amp  = $profile === 'eco' ? 150 : ($profile === 'high' ? 280 : 200);
+                // Estados de actuadores
+                $tvOn = (bool)($settings['tv_on'] ?? true);
+                $fridgeOn = (bool)($settings['fridge_on'] ?? true);
+                $lightLiving = (int)($settings['living_light_level'] ?? 40); // %
+                $lightKitchen = (int)($settings['kitchen_light_level'] ?? 25); // %
+                $lightBath = (int)($settings['bath_light_level'] ?? 0); // %
+
+                // Potencia general (incluye contribuciones)
+                $base = $profile === 'eco' ? 80 : ($profile === 'high' ? 160 : 120);
+                $amp  = $profile === 'eco' ? 120 : ($profile === 'high' ? 240 : 180);
                 $power = $base + $amp * max(0, sin(($hour - 12) / 24 * 2 * $pi)) + (mt_rand(-50, 50) / 10);
-                $power = max(50, min(800, $power));
+                $power = max(30, min(900, $power));
+
+                // TV (W) - apagada => 0
+                $tvBase = $tvOn ? 80 : 0;
+                $tvAmp  = $tvOn ? 120 : 0;
+                $tvPower = $tvOn ? ($tvBase + $tvAmp * max(0, sin(($hour - 20)/24*2*$pi)) + (mt_rand(-40,40)/10)) : 0;
+                $tvPower = max($tvOn ? 60 : 0, min($tvOn ? 250 : 0, $tvPower));
+
+                // Nevera (W) - apagada => 0
+                $fridgeBase = $fridgeOn ? 60 : 0;
+                $fridgeAmp  = $fridgeOn ? 40 : 0;
+                $fridgePower = $fridgeOn ? ($fridgeBase + $fridgeAmp * max(0, sin(($hour - 6)/24*2*$pi)) + (mt_rand(-20,20)/10)) : 0;
+                $fridgePower = max($fridgeOn ? 40 : 0, min($fridgeOn ? 140 : 0, $fridgePower));
+
+                // Luces (%), ligeras variaciones alrededor del nivel fijado
+                $jitter = function($level){ return max(0, min(100, $level + (mt_rand(-80,80)/10))); };
+                $lightLivingVar = $jitter($lightLiving);
+                $lightKitchenVar = $jitter($lightKitchen);
+                $lightBathVar = $jitter($lightBath);
+
+                // Escrituras
                 SensorReading::create([
                     'device_id' => $device->id,
                     'variable_name' => 'power',
                     'value' => round($power, 2),
                     'unit' => 'W',
+                    'recorded_at' => $now,
+                ]);
+                SensorReading::create([
+                    'device_id' => $device->id,
+                    'variable_name' => 'tv_power',
+                    'value' => round($tvPower, 2),
+                    'unit' => 'W',
+                    'recorded_at' => $now,
+                ]);
+                SensorReading::create([
+                    'device_id' => $device->id,
+                    'variable_name' => 'fridge_power',
+                    'value' => round($fridgePower, 2),
+                    'unit' => 'W',
+                    'recorded_at' => $now,
+                ]);
+                SensorReading::create([
+                    'device_id' => $device->id,
+                    'variable_name' => 'light_living',
+                    'value' => round($lightLivingVar, 0),
+                    'unit' => '%',
+                    'recorded_at' => $now,
+                ]);
+                SensorReading::create([
+                    'device_id' => $device->id,
+                    'variable_name' => 'light_kitchen',
+                    'value' => round($lightKitchenVar, 0),
+                    'unit' => '%',
+                    'recorded_at' => $now,
+                ]);
+                SensorReading::create([
+                    'device_id' => $device->id,
+                    'variable_name' => 'light_bath',
+                    'value' => round($lightBathVar, 0),
+                    'unit' => '%',
                     'recorded_at' => $now,
                 ]);
                 break;
@@ -177,9 +242,10 @@ class ReadingController extends Controller
             case 4: // Humo y gas: índices
                 $valveOpen = (bool) ($settings['gas_valve_open'] ?? true);
                 $smoke = max(0, min(100, 5 + 10 * max(0, sin(($hour - 18)/24*2*$pi)) + (mt_rand(-100,100)/20)));
-                $gasBase = $valveOpen ? 8 : 2;
-                $gasAmp  = $valveOpen ? 12 : 5;
-                $gas   = max(0, min(100, $gasBase + $gasAmp * max(0, sin(($hour - 18)/24*2*$pi)) + (mt_rand(-100,100)/20)));
+                // Válvula cerrada => gas 0
+                $gasBase = $valveOpen ? 8 : 0;
+                $gasAmp  = $valveOpen ? 12 : 0;
+                $gas   = $valveOpen ? max(0, min(100, $gasBase + $gasAmp * max(0, sin(($hour - 18)/24*2*$pi)) + (mt_rand(-100,100)/20))) : 0;
                 SensorReading::create([
                     'device_id' => $device->id,
                     'variable_name' => 'smoke',

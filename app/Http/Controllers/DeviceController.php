@@ -80,8 +80,15 @@ class DeviceController extends Controller
     {
         $payload = $request->validate([
             'temperature_target' => 'nullable|numeric',
-            'light_level' => 'nullable|integer|min:0|max:100',
+            // Luces por habitación
+            'living_light_level' => 'nullable|integer|min:0|max:100',
+            'kitchen_light_level' => 'nullable|integer|min:0|max:100',
+            'bath_light_level' => 'nullable|integer|min:0|max:100',
+            // Actuadores
             'gas_valve_open' => 'nullable|boolean',
+            'tv_on' => 'nullable|boolean',
+            'fridge_on' => 'nullable|boolean',
+            // Perfil general de consumo (fallback)
             'power_profile' => 'nullable|string|in:eco,normal,high',
         ]);
 
@@ -90,7 +97,8 @@ class DeviceController extends Controller
         $device->settings = json_encode($settings);
         $device->save();
 
-        if ($request->expectsJson()) {
+        $isAjax = $request->ajax() || $request->expectsJson() || $request->wantsJson() || str_contains((string)$request->header('Content-Type'), 'application/json');
+        if ($isAjax) {
             return response()->json(['ok' => true, 'settings' => $settings]);
         }
 
