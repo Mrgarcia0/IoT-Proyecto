@@ -23,7 +23,7 @@
             </div>
         </div>
 
-        <div class="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-5xl mx-auto">
             <a href="{{ route('devices.explorer', $device->id) }}" class="group bg-gray-800 rounded-lg p-6 shadow-lg hover:bg-gray-750 transition border border-gray-700 hover:border-blue-500">
                 <div class="flex flex-col items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-12 h-12 text-blue-400 group-hover:text-blue-300"><path d="M3 3h18v2H3zM5 8h2v11H5zM11 8h2v11h-2zM17 8h2v11h-2z"/></svg>
