@@ -384,7 +384,8 @@
           // Cocina izquierda
           { left: 21, top: 60, type: 'smoke' },
           { left: 29, top: 70, type: 'light' },
-          { left: 35,  top: 54, type: 'clean' },
+          { left: 36,  top: 54, type: 'clean' },
+          { left: 36, top: 70, type: 'air' },
 
           // El cuarto de atras
           { left: 25, top: 86, type: 'power' },
@@ -394,6 +395,7 @@
           { left: 51, top: 62, type: 'light' },
           { left: 57, top: 81, type: 'temp' },
           { left: 40, top: 39, type: 'clean' },
+          { left: 45, top: 81, type: 'air' },
 
           // Baño habitacion derecha
           { left: 72, top: 22, type: 'light' },
@@ -407,6 +409,7 @@
           { left: 72, top: 70, type: 'light' },
           { left: 80, top: 81, type: 'clean' },
           { left: 65, top: 81, type: 'temp' },
+
         ];
 
         function iconFor(type){
