@@ -21,6 +21,48 @@ Laravel is a web application framework with expressive, elegant syntax. We belie
 
 Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
+## Base de datos compartida para varios computadores
+
+Este proyecto, por defecto, usa **SQLite** (`database/database.sqlite`). Ese archivo está **ignorado por Git** (`database/.gitignore` contiene `*.sqlite*`), por lo que cada clon tendrá su propia BD local y los datos no se comparten.
+
+Para que todos vean y generen los **mismos datos** desde cualquier computador, configura una **BD central** (recomendado **MySQL/MariaDB** o **PostgreSQL**) y apunta el `.env` de cada equipo a esa instancia.
+
+### Pasos (MySQL/MariaDB recomendado)
+
+1. Crea una instancia MySQL accesible por ambos equipos (servidor en la nube, contenedor en un PC con IP y VPN, etc.).
+2. Crea BD y usuario:
+   - BD: `iot_proyecto`
+   - Usuario: `iot_user`, contraseña segura.
+3. En cada PC, configura el `.env`:
+
+   ```env
+   DB_CONNECTION=mysql
+   DB_HOST=TU_HOST_O_IP
+   DB_PORT=3306
+   DB_DATABASE=iot_proyecto
+   DB_USERNAME=iot_user
+   DB_PASSWORD=tu_password_segura
+   ```
+
+4. Ejecuta migraciones (una sola vez para crear tablas):
+
+   ```bash
+   php artisan migrate --force
+   php artisan db:seed --class=DeviceSeeder # opcional: carga dispositivos de ejemplo
+   ```
+
+Con esto, ambos equipos verán los mismos datos. La simulación y las lecturas que se generen se guardarán en la BD compartida.
+
+### Nota sobre SQLite
+
+Puedes quitar `*.sqlite*` de `database/.gitignore` y commitear `database.sqlite` para compartir un snapshot, pero **no** es recomendable: provoca conflictos y bloqueos al escribir desde varios equipos. Para colaboración, usa MySQL/PostgreSQL.
+
+### Seguridad
+
+- No commitees el `.env` con credenciales.
+- Expón sólo el puerto de la BD necesario y usa VPN/Túneles seguros.
+- Usa usuarios con permisos mínimos (lectura/escritura sobre la BD del proyecto).
+
 ## Learning Laravel
 
 Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.

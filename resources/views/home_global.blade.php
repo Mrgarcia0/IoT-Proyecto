@@ -14,6 +14,22 @@
             <h1 class="text-2xl font-bold">Casa</h1>
         </div>
 
+        <!-- Plano de la casa -->
+        <section class="mt-6 bg-gray-800 rounded-lg p-4">
+            <h2 class="text-lg font-semibold mb-3">Plano de la casa</h2>
+            <div class="bg-gray-900 rounded p-2">
+                <div id="house-map-container" class="relative">
+                    <img id="house-map"
+                         src="{{ asset('house-map.jpg') }}"
+                         alt="Plano de la casa"
+                         class="w-full h-auto rounded select-none">
+                    <!-- Overlay de cuadrados -->
+                    <div id="map-hotspots" class="absolute inset-0"></div>
+                </div>
+            </div>
+            <p class="text-xs text-gray-400 mt-2">Si no ves el plano, coloca tu imagen en <code class="bg-gray-700 px-1 rounded">public/house-map.jpg</code>.</p>
+        </section>
+
         <!-- Tablero tipo Home Assistant con tarjetas por habitación -->
         <div class="mt-6 space-y-6">
             <!-- Sala de estar -->
@@ -337,6 +353,104 @@
         function startRealtime(){ if (!interval) { refreshLatest(); interval = setInterval(refreshLatest, 8000); } }
         function stopRealtime(){ if (interval) { clearInterval(interval); interval = null; } }
         startRealtime();
+
+        // === Overlay de cuadrados con iconos ===
+        const hsContainer = document.getElementById('map-hotspots');
+        const hsImg = document.getElementById('house-map');
+
+        // Tamaño base del cuadrado en porcentaje (ajustable)
+        const SIZE_PCT = 3.2;
+
+        // Lista inicial (aproximada). Ajustaremos coordenadas contigo.
+        // type: light | clean | power | smoke | temp
+        const SQUARES = [
+          // Cocina
+          
+          // Habitación grande arriba a la izquierda
+          { left: 29, top: 38, type: 'light' },
+          { left: 21,  top: 49, type: 'clean' },
+          { left: 33, top: 49, type: 'temp' },
+
+          // Sala de estar 2 arriba a la derecha
+          { left: 13, top: 33, type: 'light' },
+          { left: 17,  top: 46, type: 'clean' },
+
+          // Baño de izquierda
+          { left: 41, top: 28, type: 'light' },
+
+          // Baño de derecha
+          { left: 60, top: 28, type: 'light' },
+
+          // Cocina izquierda
+          { left: 21, top: 60, type: 'smoke' },
+          { left: 29, top: 70, type: 'light' },
+          { left: 35,  top: 54, type: 'clean' },
+
+          // El cuarto de atras
+          { left: 25, top: 86, type: 'power' },
+
+          // Sala de estar y comedor
+          { left: 51, top: 48, type: 'light' },
+          { left: 51, top: 62, type: 'light' },
+          { left: 57, top: 81, type: 'temp' },
+          { left: 40, top: 39, type: 'clean' },
+
+          // Baño habitacion derecha
+          { left: 72, top: 22, type: 'light' },
+          
+          // Habitacion derecha
+          { left: 72, top: 46, type: 'light' },
+          { left: 80, top: 56, type: 'clean' },
+          { left: 70, top: 56, type: 'temp' },
+
+          // Habitacion derecha abajo
+          { left: 72, top: 70, type: 'light' },
+          { left: 80, top: 81, type: 'clean' },
+          { left: 65, top: 81, type: 'temp' },
+        ];
+
+        function iconFor(type){
+          switch(type){
+            case 'light': return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 2a7 7 0 00-7 7 7 7 0 005 6.7V20h4v-4.3A7 7 0 0019 9a7 7 0 00-7-7z"/></svg>';
+            case 'clean': return '🧹';
+            case 'power': return '⚡';
+            case 'smoke': return '💨';
+            case 'temp': return '🌡️';
+            case 'air': return '☁️';
+            default: return '⬛';
+          }
+        }
+
+        function renderSquares(){
+          hsContainer.innerHTML = '';
+          SQUARES.forEach((s, idx) => {
+            const el = document.createElement('button');
+            el.type = 'button';
+            el.className = 'absolute flex items-center justify-center rounded-md';
+            el.style.left = s.left + '%';
+            el.style.top = s.top + '%';
+            el.style.width = SIZE_PCT + '%';
+            el.style.height = SIZE_PCT + '%';
+            el.style.transform = 'translate(-50%, -50%)';
+            el.style.background = '#111';
+            el.style.color = '#fff';
+            el.style.boxShadow = '0 0 0 2px rgba(255,255,255,0.15)';
+            el.style.cursor = 'pointer';
+            el.title = s.type;
+            el.innerHTML = iconFor(s.type);
+            // Click comportamiento (solo luz por ahora)
+            el.addEventListener('click', () => {
+              if (s.type === 'light') {
+                // usa device 2 y sala por defecto; luego lo afinamos por zona
+                openModal('light', 2, 'living');
+              }
+            });
+            hsContainer.appendChild(el);
+          });
+        }
+
+        hsImg.addEventListener('load', renderSquares);
+        window.addEventListener('resize', renderSquares);
     </script>
 </body>
 </html>

@@ -34,7 +34,7 @@
         </aside>
 
         <!-- Contenido principal -->
-        <main class="flex-1 p-8 max-w-6xl mx-auto">
+        <main class="flex-1 p-8">
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <a href="/" class="text-sm text-blue-400 hover:underline">← Volver al Dashboard</a>

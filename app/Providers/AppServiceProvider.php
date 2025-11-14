@@ -3,7 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use App\Models\Device;
+// use Illuminate\Support\Facades\Schema;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,8 +20,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // No forzar el estado de los dispositivos en cada arranque de request.
-        // El estado debe persistir según lo que el usuario elija (ON/OFF) y
-        // sólo inicializarse mediante seeders/migraciones.
+        //
     }
 }

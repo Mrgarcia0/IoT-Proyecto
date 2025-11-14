@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+  <defs>
+    <style>
+      .bg { fill: #111827; }
+      .frame { fill: none; stroke: #374151; stroke-width: 6; }
+      .room { fill: none; stroke: #6b7280; stroke-width: 4; }
+      .label { fill: #e5e7eb; font-family: Arial, sans-serif; font-size: 28px; }
+      .title { fill: #e5e7eb; font-family: Arial, sans-serif; font-size: 42px; font-weight: bold; }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1200" height="800"/>
+  <rect class="frame" x="60" y="60" width="1080" height="680"/>
+  <!-- Simple layout blocks -->
+  <rect class="room" x="80" y="80" width="340" height="220"/>
+  <text class="label" x="100" y="160">Sala</text>
+  <rect class="room" x="440" y="80" width="320" height="220"/>
+  <text class="label" x="460" y="160">Comedor</text>
+  <rect class="room" x="780" y="80" width="340" height="220"/>
+  <text class="label" x="800" y="160">Cocina</text>
+  <rect class="room" x="80" y="320" width="340" height="200"/>
+  <text class="label" x="100" y="400">Dormitorio</text>
+  <rect class="room" x="440" y="320" width="320" height="200"/>
+  <text class="label" x="460" y="400">Baño</text>
+  <rect class="room" x="780" y="320" width="340" height="200"/>
+  <text class="label" x="800" y="400">Dormitorio</text>
+  <text class="title" x="80" y="740">Plano de la Casa (placeholder)</text>
+</svg>

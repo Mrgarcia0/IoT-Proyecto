@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+  <defs>
+    <style>
+      .bg{fill:#0f172a}
+      .panel{fill:#111827;stroke:#334155;stroke-width:12}
+      .room{fill:#0f172a;stroke:#64748b;stroke-width:8}
+      .label{font: 48px 'Inter', sans-serif; fill:#e5e7eb}
+    </style>
+  </defs>
+  <!-- Fondo oscuro para integrarse con el tema -->
+  <rect class="bg" x="0" y="0" width="1200" height="800"/>
+
+  <!-- Panel contenedor -->
+  <rect class="panel" x="60" y="60" width="1080" height="680" rx="24"/>
+
+  <!-- Grid 3 columnas x 2 filas -->
+  <!-- Fila 1 -->
+  <rect class="room" x="100" y="110" width="320" height="260" rx="12"/>
+  <text class="label" x="140" y="250">Sala</text>
+
+  <rect class="room" x="460" y="110" width="320" height="260" rx="12"/>
+  <text class="label" x="500" y="250">Comedor</text>
+
+  <rect class="room" x="820" y="110" width="320" height="260" rx="12"/>
+  <text class="label" x="860" y="250">Cocina</text>
+
+  <!-- Fila 2 -->
+  <rect class="room" x="100" y="420" width="320" height="260" rx="12"/>
+  <text class="label" x="140" y="560">Dormitorio</text>
+
+  <rect class="room" x="460" y="420" width="320" height="260" rx="12"/>
+  <text class="label" x="520" y="560">Baño</text>
+
+  <rect class="room" x="820" y="420" width="320" height="260" rx="12"/>
+  <text class="label" x="860" y="560">Dormitorio</text>
+
+  <!-- Nota: Este SVG es una recreación limpia y editable. -->
+</svg>

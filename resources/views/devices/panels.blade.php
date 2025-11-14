@@ -28,7 +28,7 @@
                 </nav>
             </div>
         </aside>
-        <main class="flex-1 p-8 max-w-6xl mx-auto">
+        <main class="flex-1 p-8">
             <a href="/" class="text-sm text-blue-400 hover:underline">← Volver al Dashboard</a>
             <h1 class="text-2xl font-bold mt-2">Paneles</h1>
 
