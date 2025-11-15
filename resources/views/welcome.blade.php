@@ -11,8 +11,8 @@
     <div class="container mx-auto p-8">
         <div class="flex items-center justify-between mb-8">
             <h1 class="text-4xl font-bold">IoT Project Dashboard</h1>
-            <a href="/casa" class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white transition">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-green-400"><path d="M12 3l9 8-1.5 1.5L18 10.5V20h-5v-5H11v5H6v-9.5L3.5 12.5 2 11z"/></svg>
+            <a href="/casa" class="inline-flex items-center gap-3 px-6 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-lg font-semibold transition shadow">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-green-400"><path d="M12 3l9 8-1.5 1.5L18 10.5V20h-5v-5H11v5H6v-9.5L3.5 12.5 2 11z"/></svg>
                 <span>Casa</span>
             </a>
         </div>
