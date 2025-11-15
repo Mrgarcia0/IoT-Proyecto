@@ -147,7 +147,10 @@
                 <div id="modal-sub" class="text-xs text-gray-500">Hace un momento</div>
                 <div class="my-4 text-center text-2xl" id="modal-value">—</div>
                 <input type="range" id="modal-range" min="0" max="100" value="50" class="w-full">
-                <button id="modal-toggle" class="mt-3 w-full px-3 py-2 bg-gray-800 text-white rounded">Encendido</button>
+                <div class="mt-3 grid grid-cols-2 gap-2">
+                    <button id="modal-toggle" class="px-3 py-2 bg-gray-800 text-white rounded">Encendido</button>
+                    <button id="modal-action" class="px-3 py-2 bg-indigo-600 text-white rounded hidden">Acción</button>
+                </div>
             </div>
         </div>
     </div>
@@ -162,7 +165,7 @@
         const mToggle = document.getElementById('modal-toggle');
         const mClose = document.getElementById('modal-close');
 
-        let current = {type:null, deviceId:null, room:null};
+        let current = {type:null, deviceId:null, room:null, zone:null};
         const lastSettings = {}; // cache de ajustes por dispositivo
 
         // Utilidad: actualizar chip visible
@@ -175,13 +178,17 @@
             else { el.classList.add('bg-gray-600','text-gray-300'); }
         }
 
-        function openModal(type, deviceId, room){
-            current = {type, deviceId, room};
+        function openModal(type, deviceId, room, zone){
+            current = {type, deviceId, room, zone};
             mTitle.textContent = typeLabel(type);
             mValue.textContent = initialValue(type);
             mSub.textContent = 'Hace un momento';
             mRange.style.display = isRange(type) ? '' : 'none';
             mToggle.style.display = isToggle(type) ? '' : 'none';
+            // Botón de acción (solo para limpiar polvo)
+            const actionBtn = document.getElementById('modal-action');
+            actionBtn.classList.add('hidden');
+            if(type==='clean'){ actionBtn.textContent = 'Limpiar'; actionBtn.classList.remove('hidden'); }
             // Inicializar estado desde ajustes persistidos
             const s = lastSettings[deviceId] || {};
             if(type==='temperature'){
@@ -190,9 +197,10 @@
                 // map 16–28 -> 0–100
                 const r = Math.round(((target - 16) / 12) * 100);
                 mRange.value = Math.max(0, Math.min(100, r));
+                mToggle.textContent = s.temperature_on ? 'Encendido' : 'Apagado';
             }
             if(type==='light'){
-                const key = room==='living' ? 'living_light_level' : (room==='kitchen' ? 'kitchen_light_level' : 'bath_light_level');
+                const key = current.zone ? (`light_${current.zone}_level`) : (room==='living' ? 'living_light_level' : (room==='kitchen' ? 'kitchen_light_level' : 'bath_light_level'));
                 const lvl = typeof s[key] === 'number' ? s[key] : 0;
                 mRange.value = lvl;
                 mValue.textContent = lvl + '%';
@@ -274,10 +282,13 @@
                 lastSettings[current.deviceId] = { ...(lastSettings[current.deviceId]||{}), temperature_target: target };
             } else if(current.type==='light'){
                 mValue.textContent = v + '%';
-                const key = current.room==='living' ? 'living_light_level' : (current.room==='kitchen' ? 'kitchen_light_level' : 'bath_light_level');
+                const key = current.zone ? (`light_${current.zone}_level`) : (current.room==='living' ? 'living_light_level' : (current.room==='kitchen' ? 'kitchen_light_level' : 'bath_light_level'));
                 postSettings(current.deviceId, { [key]: v });
                 const chipId = current.room==='living' ? 'chip-light-living' : (current.room==='kitchen' ? 'chip-light-kitchen' : 'chip-light-bath');
                 setChip(chipId, v > 0);
+                // Actualiza iconos del plano
+                lastSettings[2] = { ...(lastSettings[2]||{}), [key]: v };
+                updateSquareIcons();
             }
         });
         mToggle.addEventListener('click', () => {
@@ -295,11 +306,35 @@
                 setChip('chip-fridge', next);
             } else if(current.type==='light'){
                 if(!next){
-                    const key = current.room==='living' ? 'living_light_level' : (current.room==='kitchen' ? 'kitchen_light_level' : 'bath_light_level');
+                    const key = current.zone ? (`light_${current.zone}_level`) : (current.room==='living' ? 'living_light_level' : (current.room==='kitchen' ? 'kitchen_light_level' : 'bath_light_level'));
                     postSettings(current.deviceId, { [key]: 0 });
                     const chipId = current.room==='living' ? 'chip-light-living' : (current.room==='kitchen' ? 'chip-light-kitchen' : 'chip-light-bath');
                     setChip(chipId, false);
+                    lastSettings[2] = { ...(lastSettings[2]||{}), [key]: 0 };
+                    updateSquareIcons();
                 }
+            } else if(current.type==='temperature'){
+                postSettings(current.deviceId, { temperature_on: next });
+                lastSettings[current.deviceId] = { ...(lastSettings[current.deviceId]||{}), temperature_on: next };
+            }
+        });
+
+        // Acción de limpiar polvo
+        document.getElementById('modal-action').addEventListener('click', async () => {
+            if(current.type!=='clean') return;
+            try {
+                // Obtener lectura actual de polvo
+                const res = await fetch(`/devices/5/latest`, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+                const data = await res.json();
+                const cur = (data.series?.pm25?.value ?? 50);
+                const reduced = Math.max(5, Math.round(cur * 0.3)); // baja considerablemente
+                mValue.textContent = reduced + ' µg/m³';
+                mSub.textContent = 'Polvo reducido';
+                // Guardar override en ajustes para que se mantenga
+                postSettings(5, { pm25_override: reduced });
+                lastSettings[5] = { ...(lastSettings[5]||{}), pm25_override: reduced };
+            } catch(e) {
+                mSub.textContent = 'Error limpiando';
             }
         });
 
@@ -323,6 +358,7 @@
                         setChip('chip-light-living', (s.light_living?.value ?? st.living_light_level ?? 0) > 0);
                         setChip('chip-light-kitchen', (s.light_kitchen?.value ?? st.kitchen_light_level ?? 0) > 0);
                         setChip('chip-light-bath', (s.light_bath?.value ?? st.bath_light_level ?? 0) > 0);
+                        updateSquareIcons();
                     }
                     if (id===4) {
                         const st4 = lastSettings[4] || {};
@@ -331,21 +367,28 @@
                     // Actualizar indicadores clave
                     const tempEl = document.getElementById('val-1-temp');
                     if (id===1) {
-                        if (s.temperature) {
-                            tempEl.textContent = `${s.temperature.value} ${s.temperature.unit||''}`;
-                        } else {
-                            const st = lastSettings[1] || {};
-                            const t = typeof st.temperature_target === 'number' ? st.temperature_target : 22;
-                            tempEl.textContent = `${t} °C`;
-                        }
+                        const st1 = lastSettings[1] || {};
+                        const t = typeof st1.temperature_target === 'number' ? st1.temperature_target : (s.temperature?.value ?? 22);
+                        tempEl.textContent = `${t} °C`;
                     }
                     if (id===2 && s.tv_power) document.getElementById('val-2-tv').textContent = `${s.tv_power.value} ${s.tv_power.unit||''}`;
-                    if (id===2 && s.light_living) document.getElementById('val-2-light-living').textContent = `${s.light_living.value}%`;
-                    if (id===2 && s.light_kitchen) document.getElementById('val-2-light-kitchen').textContent = `${s.light_kitchen.value}%`;
-                    if (id===2 && s.light_bath) document.getElementById('val-2-light-bath').textContent = `${s.light_bath.value}%`;
+                    if (id===2) {
+                        const st2 = lastSettings[2] || {};
+                        const lv = typeof st2.living_light_level === 'number' ? st2.living_light_level : (s.light_living?.value ?? 0);
+                        const kv = typeof st2.kitchen_light_level === 'number' ? st2.kitchen_light_level : (s.light_kitchen?.value ?? 0);
+                        const bv = typeof st2.bath_light_level === 'number' ? st2.bath_light_level : (s.light_bath?.value ?? 0);
+                        document.getElementById('val-2-light-living').textContent = `${lv}%`;
+                        document.getElementById('val-2-light-kitchen').textContent = `${kv}%`;
+                        document.getElementById('val-2-light-bath').textContent = `${bv}%`;
+                    }
                     if (id===2 && s.fridge_power) document.getElementById('val-2-fridge').textContent = `${s.fridge_power.value} ${s.fridge_power.unit||''}`;
                     if (id===3) document.getElementById('val-3-air').textContent = `${s.co2?.value ?? '—'} ${s.co2?.unit ?? ''}`;
-                    if (id===5) document.getElementById('val-5-dust').textContent = `${s.pm25?.value ?? '—'} ${s.pm25?.unit ?? ''}`;
+                    if (id===5) {
+                        const ov = (lastSettings[5]||{}).pm25_override;
+                        const val = typeof ov==='number' ? ov : (s.pm10?.value ?? '—');
+                        const unit = s.pm10?.unit ?? 'µg/m³';
+                        document.getElementById('val-5-dust').textContent = `${val} ${unit}`;
+                    }
                     if (id===4) document.getElementById('val-4-gas').textContent = `${s.gas?.value ?? '—'} ${s.gas?.unit ?? ''}`;
                 } catch (e) { console.warn('refresh error', e); }
             });
@@ -367,23 +410,23 @@
           // Cocina
           
           // Habitación grande arriba a la izquierda
-          { left: 29, top: 38, type: 'light' },
+          { left: 29, top: 38, type: 'light', zone: 'z1' },
           { left: 21,  top: 49, type: 'clean' },
           { left: 33, top: 49, type: 'temp' },
 
           // Sala de estar 2 arriba a la derecha
-          { left: 13, top: 33, type: 'light' },
+          { left: 13, top: 33, type: 'light', zone: 'z2' },
           { left: 17,  top: 46, type: 'clean' },
 
           // Baño de izquierda
-          { left: 41, top: 28, type: 'light' },
+          { left: 41, top: 28, type: 'light', zone: 'z3' },
 
           // Baño de derecha
-          { left: 60, top: 28, type: 'light' },
+          { left: 60, top: 28, type: 'light', zone: 'z4' },
 
           // Cocina izquierda
           { left: 21, top: 60, type: 'smoke' },
-          { left: 29, top: 70, type: 'light' },
+          { left: 29, top: 70, type: 'light', zone: 'z5' },
           { left: 36,  top: 54, type: 'clean' },
           { left: 36, top: 70, type: 'air' },
 
@@ -391,30 +434,31 @@
           { left: 25, top: 86, type: 'power' },
 
           // Sala de estar y comedor
-          { left: 51, top: 48, type: 'light' },
-          { left: 51, top: 62, type: 'light' },
+          { left: 51, top: 48, type: 'light', zone: 'z6' },
+          { left: 51, top: 62, type: 'light', zone: 'z7' },
           { left: 57, top: 81, type: 'temp' },
           { left: 40, top: 39, type: 'clean' },
           { left: 45, top: 81, type: 'air' },
 
           // Baño habitacion derecha
-          { left: 72, top: 22, type: 'light' },
+          { left: 72, top: 22, type: 'light', zone: 'z8' },
           
           // Habitacion derecha
-          { left: 72, top: 46, type: 'light' },
+          { left: 72, top: 46, type: 'light', zone: 'z9' },
           { left: 80, top: 56, type: 'clean' },
           { left: 70, top: 56, type: 'temp' },
 
           // Habitacion derecha abajo
-          { left: 72, top: 70, type: 'light' },
+          { left: 72, top: 70, type: 'light', zone: 'z10' },
           { left: 80, top: 81, type: 'clean' },
           { left: 65, top: 81, type: 'temp' },
 
         ];
 
-        function iconFor(type){
+        function iconLight(on){ return on ? '🔆' : '💡'; }
+        function iconFor(type, on=false){
           switch(type){
-            case 'light': return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 2a7 7 0 00-7 7 7 7 0 005 6.7V20h4v-4.3A7 7 0 0019 9a7 7 0 00-7-7z"/></svg>';
+            case 'light': return iconLight(on);
             case 'clean': return '🧹';
             case 'power': return '⚡';
             case 'smoke': return '💨';
@@ -424,6 +468,7 @@
           }
         }
 
+        const squareEls = [];
         function renderSquares(){
           hsContainer.innerHTML = '';
           SQUARES.forEach((s, idx) => {
@@ -440,15 +485,42 @@
             el.style.boxShadow = '0 0 0 2px rgba(255,255,255,0.15)';
             el.style.cursor = 'pointer';
             el.title = s.type;
-            el.innerHTML = iconFor(s.type);
+            el.innerHTML = iconFor(s.type, false);
+            el.dataset.type = s.type;
+            if(s.zone) el.dataset.zone = s.zone;
             // Click comportamiento (solo luz por ahora)
             el.addEventListener('click', () => {
               if (s.type === 'light') {
-                // usa device 2 y sala por defecto; luego lo afinamos por zona
-                openModal('light', 2, 'living');
+                openModal('light', 2, null, s.zone);
+              } else if (s.type === 'temp') {
+                openModal('temperature', 1, 'living');
+              } else if (s.type === 'clean') {
+                openModal('clean', 5);
+              } else if (['air','smoke','power'].includes(s.type)) {
+                // Solo informativo
+                openModal('info', 0);
+                mRange.style.display = 'none';
+                mToggle.style.display = 'none';
+                document.getElementById('modal-action').classList.add('hidden');
+                // Mostrar valor si disponible en tarjetas
+                if(s.type==='air') mValue.textContent = document.getElementById('val-3-air').textContent;
+                if(s.type==='smoke') mValue.textContent = document.getElementById('val-4-gas').textContent;
+                if(s.type==='power') mValue.textContent = document.getElementById('val-2-fridge').textContent; // consumo de electricidad como ejemplo
               }
             });
             hsContainer.appendChild(el);
+            squareEls[idx] = el;
+          });
+        }
+
+        function updateSquareIcons(){
+          squareEls.forEach((el) => {
+            const type = el.dataset.type;
+            if(type==='light'){
+              const zone = el.dataset.zone;
+              const lvl = (lastSettings[2]||{})[`light_${zone}_level`];
+              el.innerHTML = iconLight((typeof lvl==='number' ? lvl : 0) > 0);
+            }
           });
         }
 

@@ -78,8 +78,10 @@ class DeviceController extends Controller
      */
     public function updateSettings(Request $request, Device $device)
     {
+        // Validación básica de claves conocidas
         $payload = $request->validate([
             'temperature_target' => 'nullable|numeric',
+            'temperature_on' => 'nullable|boolean',
             // Luces por habitación
             'living_light_level' => 'nullable|integer|min:0|max:100',
             'kitchen_light_level' => 'nullable|integer|min:0|max:100',
@@ -88,9 +90,21 @@ class DeviceController extends Controller
             'gas_valve_open' => 'nullable|boolean',
             'tv_on' => 'nullable|boolean',
             'fridge_on' => 'nullable|boolean',
+            // Otros overrides
+            'pm25_override' => 'nullable|numeric',
             // Perfil general de consumo (fallback)
             'power_profile' => 'nullable|string|in:eco,normal,high',
         ]);
+
+        // Aceptar dinámicamente zonas de luz: light_<zona>_level => 0..100
+        foreach ($request->keys() as $key) {
+            if (preg_match('/^light_[a-zA-Z0-9]+_level$/', $key)) {
+                $val = (int) $request->input($key);
+                if ($val >= 0 && $val <= 100) {
+                    $payload[$key] = $val;
+                }
+            }
+        }
 
         $settings = $device->settings ? json_decode($device->settings, true) : [];
         $settings = array_merge($settings, $payload);
